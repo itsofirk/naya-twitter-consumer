@@ -4,6 +4,8 @@ import pyspark.sql.types as dtypes
 from pyspark.sql import SparkSession
 
 
+
+
 def get_spark_session():
     return SparkSession.builder.appName('naya-twitter-cleanse') \
         .config("spark.jars", C.KAFKA_JAR_LOCATION) \
@@ -22,7 +24,7 @@ def read_from_kafka(session, host, topic, starting_offset='earliest'):
 
 def write_to_kafka(host, topic, key_value_df):
     ds = key_value_df.writeStream \
-        .option("checkpointLocation", 'D:\\tmp') \
+        .option("checkpointLocation", C.CHECKPOINT_LOCATION) \
         .format("kafka") \
         .option("kafka.bootstrap.servers", host) \
         .option("topic", topic) \
