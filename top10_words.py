@@ -14,7 +14,7 @@ def write_to_console():
         .format("console") \
         .outputMode("complete") \
         .start()
-    ds.processAllAvailable()
+    ds.awaitTermination()
 
 
 if __name__ == '__main__':
