@@ -1,30 +1,16 @@
-import constants as C
+from os import path
 import pyspark.sql.functions as F
 import pyspark.sql.types as dtypes
-from pyspark.sql import SparkSession
+import utils
+import constants as C
+import configs
 
-
-
-
-def get_spark_session():
-    return SparkSession.builder.appName('naya-twitter-cleanse') \
-        .config("spark.jars", C.KAFKA_JAR_LOCATION) \
-        .master('local[*]') \
-        .getOrCreate()
-
-
-def read_from_kafka(session, host, topic, starting_offset='earliest'):
-    return session.readStream \
-        .format("kafka") \
-        .option("kafka.bootstrap.servers", host) \
-        .option("subscribe", topic) \
-        .option("startingOffsets", starting_offset) \
-        .load()
+APPNAME = 'naya-twitter-cleanse'
 
 
 def write_to_kafka(host, topic, key_value_df):
     ds = key_value_df.writeStream \
-        .option("checkpointLocation", C.CHECKPOINT_LOCATION) \
+        .option("checkpointLocation", path.join(C.CHECKPOINT_LOCATION, APPNAME)) \
         .format("kafka") \
         .option("kafka.bootstrap.servers", host) \
         .option("topic", topic) \
@@ -69,13 +55,9 @@ def data_cleanse(tweets_df):
 
 
 if __name__ == "__main__":
-    spark = get_spark_session()
+    spark = utils.get_spark_session(APPNAME)
 
-    kafka_host = "localhost:9092"
-    raw_topic = "tweets_raw"
-    words_topic = "tweets_words"
-
-    df = read_from_kafka(spark, kafka_host, raw_topic)
+    df = utils.read_from_kafka(spark, configs.get_kafka_host(), configs.get_raw_topic())
     parsed_df = parse_tweets_json(df)
     only_words_df = data_cleanse(parsed_df)
 
@@ -83,4 +65,4 @@ if __name__ == "__main__":
     df = only_words_df.withColumnRenamed('word', 'value') \
         .withColumn('key', F.lit(None).cast('string'))
 
-    write_to_kafka(kafka_host, words_topic, df)
+    write_to_kafka(configs.get_kafka_host(), configs.get_words_topic(), df)
